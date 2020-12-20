@@ -46,11 +46,11 @@ jobs:
          run: |
              mkdir work
              cd work
-             git clone $KERNEL_LINK -b phoenix-q-oss $KERNEL_PATH
+             git clone $KERNEL_LINK $KERNEL_PATH
              
        - name: Build
          run: |
-              cd work/phoenix
+              cd work/$KERNEL_PATH
               chmode +x build.sh
               ./build.sh
              
