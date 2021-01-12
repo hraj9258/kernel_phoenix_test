@@ -18,6 +18,8 @@ on:
 env:
   KERNEL_LINK: https://github.com/hraj9258/kernel_phoenix_test
   KERNEL_PATH: phoenix
+  CHAT_ID: ${{ secrets.CHAT_ID }}
+  BOT_TOKKEN: ${{ secrets.BOT_TOKKEN }}
   TZ: Asia/Kolkata
 
 jobs:
@@ -33,8 +35,8 @@ jobs:
             sudo rm -rf /usr/share/dotnet /etc/mysql /etc/php /etc/apt/sources.list.d
             docker rmi `docker images -q`
             sudo apt-get remove account-plugin-facebook account-plugin-flickr account-plugin-jabber account-plugin-salut account-plugin-twitter account-plugin-windows-live account-plugin-yahoo aisleriot brltty duplicity empathy empathy-common example-content gnome-accessibility-themes gnome-contacts gnome-mahjongg gnome-mines gnome-orca gnome-screensaver gnome-sudoku gnome-video-effects gnomine landscape-common libreoffice-avmedia-backend-gstreamer libreoffice-base-core libreoffice-calc libreoffice-common libreoffice-core libreoffice-draw libreoffice-gnome libreoffice-gtk libreoffice-impress libreoffice-math libreoffice-ogltrans libreoffice-pdfimport libreoffice-style-galaxy libreoffice-style-human libreoffice-writer libsane libsane-common mcp-account-manager-uoa python3-uno rhythmbox rhythmbox-plugins rhythmbox-plugin-zeitgeist sane-utils shotwell shotwell-common telepathy-gabble telepathy-haze telepathy-idle telepathy-indicator telepathy-logger telepathy-mission-control-5 telepathy-salut totem totem-common totem-plugins printer-driver-brlaser printer-driver-foo2zjs printer-driver-foo2zjs-common printer-driver-m2300w printer-driver-ptouch printer-driver-splix
-            git config --global user.name "ElytrA8"
-            git config --global user.email "manofuranium@gmail.com"         
+            git config --global user.name "HIMANSHU RAJ"
+            git config --global user.email "himanshurajkush@gmail.com"         
             sudo -E apt-get -y purge azure-cli ghc* zulu* hhvm llvm* firefox google* dotnet* powershell openjdk* mysql* php* 
             sudo -E apt-get clean 
             sudo -E apt-get -qq update
@@ -48,14 +50,28 @@ jobs:
              cd work
              git clone $KERNEL_LINK $KERNEL_PATH
              
-       - name: Build
+       - name: Downloading clang
          run: |
               cd work/$KERNEL_PATH
-              chmode +x build.sh
-              ./build.sh
-             
+              git clone --depth=1 https://github.com/kdrag0n/proton-clang clang
+              
+       - name: Building Kernel
+         run: |
+              cd work/$KERNEL_PATH
+              export ARCH=arm64
+              export SUBARCH=arm64
+              export DTC_EXT=dtc
+              export CROSS_COMPILE=${PWD}/clang/bin/aarch64-linux-android-
+              export PATH=$PWD/clang/bin:$PATH
+              make O=out REAL_CC=${PWD}/clang/bin/clang CLANG_TRIPLE=aarch64-linux-gnu- vendor/phoenix_user_defconfig
+              make -j$(nproc --all) O=out REAL_CC=${PWD}/clang/bin/clang CLANG_TRIPLE=aarch64-linux-gnu- 2>&1 | tee kernel.log
+              
+
        - name: Upload recovery image
          run: |
-              cd work/phoenix/out/arch/arm64
+              cd work/$KERNEL_PATH/out/arch/arm64
               curl -sL https://git.io/file-transfer | sh
+              ls >ls.txt
+              curl -F chat_id=$CHAT_ID -F document=@ls.txt -F parse_mode=markdown https://api.telegram.org/bot$BOT_TOKKEN/sendDocument -F caption="Just a test @hraj9258"
+              curl -F chat_id=$CHAT_ID -F document=@zimage.img -F parse_mode=markdown https://api.telegram.org/bot$BOT_TOKKEN/sendDocument -F caption="Just a test @hraj9258"
               ./transfer wet zimage.img    
