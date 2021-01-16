@@ -16,6 +16,8 @@ on:
     types: [started]
 
 env:
+  KERNEL_LINK: https://github.com/hraj9258/kernel_phoenix_test
+  KERNEL_PATH: phoenix
   CHAT_ID: ${{ secrets.CHAT_ID }}
   BOT_TOKKEN: ${{ secrets.BOT_TOKKEN }}
   TZ: Asia/Kolkata
@@ -42,18 +44,34 @@ jobs:
             sudo curl --create-dirs -L -o /usr/local/bin/repo -O -L https://storage.googleapis.com/git-repo-downloads/repo
             sudo chmod a+rx /usr/local/bin/repo
             
+       - name: Sync kernel source
+         run: |
+             mkdir work
+             cd work
+             git clone $KERNEL_LINK $KERNEL_PATH
+             
+       - name: Downloading clang
+         run: |
+              cd work/$KERNEL_PATH
+              git clone https://android.googlesource.com/platform/prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9 toolchain
+              git clone --depth=1 https://github.com/kdrag0n/proton-clang clang
               
        - name: Building Kernel
          run: |
-              git clone https://github.com/hraj9258/kernel_phoenix_test.git phoenix
-              cd phoenix/
-              bash build.sh
-
+              cd work/$KERNEL_PATH
+              export ARCH=arm64
+              export SUBARCH=arm64
+              export DTC_EXT=dtc
+              export CROSS_COMPILE=${PWD}/toolchain/bin/aarch64-linux-android-
+              export PATH=$PWD/clang/bin:$PATH
+              make O=out REAL_CC=${PWD}/clang/bin/clang CLANG_TRIPLE=aarch64-linux-gnu- vendor/phoenix_user_defconfig
+              make -j$(nproc --all) O=out REAL_CC=${PWD}/clang/bin/clang CLANG_TRIPLE=aarch64-linux-gnu- 2>&1 | tee kernel.log
+              
        - name: Upload recovery image
          run: |
-              cd phoenix/out/arch/arm64
+              cd work/$KERNEL_PATH/out/arch/arm64
               curl -sL https://git.io/file-transfer | sh
               ls >ls.txt
               curl -F chat_id=$CHAT_ID -F document=@ls.txt -F parse_mode=markdown https://api.telegram.org/bot$BOT_TOKKEN/sendDocument -F caption="Just a test @hraj9258"
               curl -F chat_id=$CHAT_ID -F document=@zimage.img -F parse_mode=markdown https://api.telegram.org/bot$BOT_TOKKEN/sendDocument -F caption="Just a test @hraj9258"
-              ./transfer wet zimage.img    
+              ./transfer wet zimage.img
