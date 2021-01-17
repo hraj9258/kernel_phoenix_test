@@ -54,7 +54,7 @@ jobs:
          run: |
               cd work/$KERNEL_PATH
               git clone https://android.googlesource.com/platform/prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9 toolchain
-              git clone --depth=1 https://github.com/kdrag0n/proton-clang clang
+              git clone --depth=1 https://github.com/crdroidandroid/android_prebuilts_clang_host_linux-x86_clang-5484270 clang
               
        - name: Building Kernel
          run: |
